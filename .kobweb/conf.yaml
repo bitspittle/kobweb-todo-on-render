@@ -14,6 +14,7 @@ server:
   cors:
     hosts:
       - name: "kobweb-todo.onrender.com"
-        scheme: "https"
+        schemes:
+          - "https"
 
   port: 8080
