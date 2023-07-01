@@ -1,10 +1,8 @@
-FROM debian:stable-slim as base
-
 #-----------------------------------------------------------------------------
 # Create an intermediate image which builds and exports our site. In the
 # final stage, we'll only extract what we need from this stage, saving a lot
 # of space.
-FROM base as export
+FROM openjdk:11-jdk as export
 
 ENV KOBWEB_CLI_VERSION=0.9.12
 
@@ -16,7 +14,7 @@ COPY . /project
 # Note: Playwright is a system for running browsers, and here we use it to
 # install Chromium.
 RUN apt-get update \
-    && apt-get install -y curl gnupg unzip wget openjdk-11-jdk \
+    && apt-get install -y curl gnupg unzip wget \
     && curl -sL https://deb.nodesource.com/setup_19.x | bash - \
     && apt-get install -y nodejs \
     && npm init -y \
@@ -42,11 +40,8 @@ RUN kobweb export --notty
 #-----------------------------------------------------------------------------
 # Create the final image, which contains just enough bits to run the Kobweb
 # server.
-FROM base as run
+FROM openjdk:11-jre-slim as run
 
 COPY --from=export /project/.kobweb .kobweb
-
-RUN apt-get update \
-    && apt-get install -y openjdk-11-jre-headless
 
 ENTRYPOINT .kobweb/server/start.sh
