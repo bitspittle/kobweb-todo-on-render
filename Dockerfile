@@ -5,6 +5,8 @@
 FROM openjdk:11-jdk as export
 
 ENV KOBWEB_CLI_VERSION=0.9.12
+ENV KOBWEB_APP_ROOT=""
+# ^ NOTE: APP_ROOT is commonly "site" in multimodule projects
 
 # Copy the project code to an arbitrary subdir so we can install stuff in the
 # Docker container root without worrying about clobbering project files.
@@ -27,7 +29,7 @@ RUN wget https://github.com/varabyte/kobweb-cli/releases/download/v${KOBWEB_CLI_
 
 ENV PATH="/kobweb-${KOBWEB_CLI_VERSION}/bin:${PATH}"
 
-WORKDIR /project
+WORKDIR /project/${KOBWEB_APP_ROOT}
 
 # Decrease Gradle memory usage to avoid OOM situations in tight environments
 # (many free Cloud tiers only give you 512M of RAM). The following amount
@@ -42,6 +44,6 @@ RUN kobweb export --notty
 # server.
 FROM openjdk:11-jre-slim as run
 
-COPY --from=export /project/.kobweb .kobweb
+COPY --from=export /project/${KOBWEB_APP_ROOT}/.kobweb .kobweb
 
 ENTRYPOINT .kobweb/server/start.sh
