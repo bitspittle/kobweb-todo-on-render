@@ -1,7 +1,7 @@
 #-----------------------------------------------------------------------------
-# Create an intermediate image which builds and exports our site. In the
-# final stage, we'll only extract what we need from this stage, saving a lot
-# of space.
+# Create an intermediate Docker image which builds and exports our site. In
+# the final stage, we'll only extract what we need from this stage, saving a
+# lot of space.
 FROM openjdk:11-jdk as export
 
 ENV KOBWEB_CLI_VERSION=0.9.12
@@ -37,6 +37,7 @@ WORKDIR /project/${KOBWEB_APP_ROOT}
 RUN mkdir ~/.gradle && \
     echo "org.gradle.jvmargs=-Xmx256m" >> ~/.gradle/gradle.properties
 
+# No interactive TTY, since we're in a CI environment
 RUN kobweb export --notty
 
 #-----------------------------------------------------------------------------
