@@ -1,12 +1,17 @@
 #-----------------------------------------------------------------------------
-# Create an intermediate Docker image which builds and exports our site. In
-# the final stage, we'll only extract what we need from this stage, saving a
-# lot of space.
+# Declare variables shared across multiple stages (they need to be explicitly
+# opted into each stage by being declaring there too, but their values need
+# only be specified once).
+ARG KOBWEB_APP_ROOT=""
+
+#-----------------------------------------------------------------------------
+# Create an intermediate stage which builds and exports our site. In the
+# final stage, we'll only extract what we need from this stage, saving a lot
+# of space.
 FROM openjdk:11-jdk as export
 
 ENV KOBWEB_CLI_VERSION=0.9.12
-ENV KOBWEB_APP_ROOT=""
-# ^ NOTE: APP_ROOT is commonly "site" in multimodule projects
+ARG KOBWEB_APP_ROOT
 
 # Copy the project code to an arbitrary subdir so we can install stuff in the
 # Docker container root without worrying about clobbering project files.
@@ -41,9 +46,11 @@ RUN mkdir ~/.gradle && \
 RUN kobweb export --notty
 
 #-----------------------------------------------------------------------------
-# Create the final image, which contains just enough bits to run the Kobweb
+# Create the final stage, which contains just enough bits to run the Kobweb
 # server.
 FROM openjdk:11-jre-slim as run
+
+ARG KOBWEB_APP_ROOT
 
 COPY --from=export /project/${KOBWEB_APP_ROOT}/.kobweb .kobweb
 
