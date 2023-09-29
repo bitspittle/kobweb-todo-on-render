@@ -5,8 +5,6 @@
 ARG KOBWEB_APP_ROOT=""
 # ^ NOTE: KOBWEB_APP_ROOT is commonly set to "site" in multimodule projects
 
-# NOTE: Kobweb works with Java 11, but all JDK 11 docker images I found are
-# deprecate at the moment.
 FROM eclipse-temurin:17 as java
 
 #-----------------------------------------------------------------------------
