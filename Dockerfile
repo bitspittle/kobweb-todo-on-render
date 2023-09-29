@@ -1,28 +1,39 @@
 #-----------------------------------------------------------------------------
-# Declare variables shared across multiple stages (they need to be explicitly
-# opted into each stage by being declaring there too, but their values need
-# only be specified once).
+# Variables are shared across multiple stages (they need to be explicitly
+# opted # into each stage by being declaring there too, but their values need
+# only be # specified once).
 ARG KOBWEB_APP_ROOT=""
+# ^ NOTE: KOBWEB_APP_ROOT is commonly set to "site" in multimodule projects
+
+# NOTE: Kobweb works with Java 11, but all JDK 11 docker images I found are
+# deprecate at the moment.
+FROM eclipse-temurin:17 as java
 
 #-----------------------------------------------------------------------------
 # Create an intermediate stage which builds and exports our site. In the
 # final stage, we'll only extract what we need from this stage, saving a lot
 # of space.
-FROM openjdk:11-jdk as export
+FROM java as export
 
 ENV KOBWEB_CLI_VERSION=0.9.13
 ARG KOBWEB_APP_ROOT
+
+ENV NODE_MAJOR=20
 
 # Copy the project code to an arbitrary subdir so we can install stuff in the
 # Docker container root without worrying about clobbering project files.
 COPY . /project
 
 # Update and install required OS packages to continue
+# Note: Node install instructions from: https://github.com/nodesource/distributions#installation-instructions
 # Note: Playwright is a system for running browsers, and here we use it to
 # install Chromium.
 RUN apt-get update \
-    && apt-get install -y curl gnupg unzip wget \
-    && curl -sL https://deb.nodesource.com/setup_19.x | bash - \
+    && apt-get install -y ca-certificates curl gnupg unzip wget \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
     && apt-get install -y nodejs \
     && npm init -y \
     && npx playwright install --with-deps chromium
@@ -42,13 +53,12 @@ WORKDIR /project/${KOBWEB_APP_ROOT}
 RUN mkdir ~/.gradle && \
     echo "org.gradle.jvmargs=-Xmx256m" >> ~/.gradle/gradle.properties
 
-# No interactive TTY, since we're in a CI environment
 RUN kobweb export --notty
 
 #-----------------------------------------------------------------------------
 # Create the final stage, which contains just enough bits to run the Kobweb
 # server.
-FROM openjdk:11-jre-slim as run
+FROM java as run
 
 ARG KOBWEB_APP_ROOT
 
