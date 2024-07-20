@@ -4,7 +4,7 @@
 # only be # specified once).
 ARG KOBWEB_APP_ROOT="site"
 
-FROM eclipse-temurin:17 AS java
+FROM eclipse-temurin:21 AS java
 
 #-----------------------------------------------------------------------------
 # Create an intermediate stage which builds and exports our site. In the
