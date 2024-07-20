@@ -4,13 +4,13 @@
 # only be # specified once).
 ARG KOBWEB_APP_ROOT="site"
 
-FROM eclipse-temurin:17 as java
+FROM eclipse-temurin:17 AS java
 
 #-----------------------------------------------------------------------------
 # Create an intermediate stage which builds and exports our site. In the
 # final stage, we'll only extract what we need from this stage, saving a lot
 # of space.
-FROM java as export
+FROM java AS export
 
 ENV KOBWEB_CLI_VERSION=0.9.15
 ARG KOBWEB_APP_ROOT
@@ -55,10 +55,10 @@ RUN kobweb export --notty
 #-----------------------------------------------------------------------------
 # Create the final stage, which contains just enough bits to run the Kobweb
 # server.
-FROM java as run
+FROM java AS run
 
 ARG KOBWEB_APP_ROOT
 
 COPY --from=export /project/${KOBWEB_APP_ROOT}/.kobweb .kobweb
 
-ENTRYPOINT .kobweb/server/start.sh
+ENTRYPOINT [".kobweb/server/start.sh"]
