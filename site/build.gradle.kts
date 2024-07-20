@@ -20,7 +20,6 @@ version = "1.0-SNAPSHOT"
 kotlin {
     configAsKobwebApplication(includeServer = true)
 
-    @Suppress("UNUSED_VARIABLE") // Suppress spurious warnings about sourceset variables not being used
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -31,6 +30,7 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
+                implementation(compose.html.core)
                 implementation(libs.kobweb.core)
                 implementation(libs.kobweb.silk.core)
             }
