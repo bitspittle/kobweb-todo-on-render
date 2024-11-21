@@ -12,7 +12,7 @@ FROM eclipse-temurin:21 AS java
 # of space.
 FROM java AS export
 
-ENV KOBWEB_CLI_VERSION=0.9.15
+ENV KOBWEB_CLI_VERSION=0.9.18
 ARG KOBWEB_APP_ROOT
 
 ENV NODE_MAJOR=20
@@ -62,4 +62,8 @@ ARG KOBWEB_APP_ROOT
 
 COPY --from=export /project/${KOBWEB_APP_ROOT}/.kobweb .kobweb
 
+# Because many free tiers only give you 512M of RAM, let's limit the server's
+# memory usage to that. You can remove this ENV line if your server isn't so
+# restricted. That said, 512M should be plenty for most (all?) sites.
+ENV JAVA_TOOL_OPTIONS="-Xmx512m"
 ENTRYPOINT [".kobweb/server/start.sh"]
