@@ -49,7 +49,7 @@ WORKDIR /project/${KOBWEB_APP_ROOT}
 # should enough to build and export our site. If you ever get an OOM error,
 # consider bumping the memory value up further.
 RUN mkdir ~/.gradle && \
-    echo "org.gradle.jvmargs=-Xmx300m" >> ~/.gradle/gradle.properties
+    echo "org.gradle.jvmargs=-Xmx400m" >> ~/.gradle/gradle.properties
 
 RUN kobweb export --notty
 
