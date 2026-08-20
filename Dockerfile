@@ -12,7 +12,6 @@ FROM eclipse-temurin:21 AS java
 # of space.
 FROM java AS export
 
-ENV KOBWEB_CLI_VERSION=0.9.18
 ARG KOBWEB_APP_ROOT
 
 ENV NODE_MAJOR=20
@@ -35,12 +34,14 @@ RUN apt-get update \
     && npm init -y \
     && npx playwright install --with-deps chromium
 
-# Fetch the latest version of the Kobweb CLI
-RUN wget https://github.com/varabyte/kobweb-cli/releases/download/v${KOBWEB_CLI_VERSION}/kobweb-${KOBWEB_CLI_VERSION}.zip \
+# Fetch and extract the latest version of the Kobweb CLI
+RUN KOBWEB_CLI_VERSION=$(curl -sSL https://raw.githubusercontent.com/varabyte/data/refs/heads/main/kobweb/cli-version.txt | xargs) \
+    && wget https://github.com/varabyte/kobweb-cli/releases/download/v${KOBWEB_CLI_VERSION}/kobweb-${KOBWEB_CLI_VERSION}.zip \
     && unzip kobweb-${KOBWEB_CLI_VERSION}.zip \
-    && rm kobweb-${KOBWEB_CLI_VERSION}.zip
+    && rm kobweb-${KOBWEB_CLI_VERSION}.zip \
+    && ln -s /kobweb-${KOBWEB_CLI_VERSION} /kobweb-cli
 
-ENV PATH="/kobweb-${KOBWEB_CLI_VERSION}/bin:${PATH}"
+ENV PATH="/kobweb-cli/bin:${PATH}"
 
 WORKDIR /project/${KOBWEB_APP_ROOT}
 
