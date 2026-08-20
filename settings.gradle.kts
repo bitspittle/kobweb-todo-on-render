@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.mavenCentral
+
 pluginManagement {
     repositories {
         gradlePluginPortal()
@@ -7,6 +9,7 @@ pluginManagement {
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
         google()
     }
 }
