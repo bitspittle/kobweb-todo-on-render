@@ -4,7 +4,7 @@
 # only be # specified once).
 ARG KOBWEB_APP_ROOT="site"
 
-FROM eclipse-temurin:21 AS java
+FROM eclipse-temurin:21-jdk AS java
 
 #-----------------------------------------------------------------------------
 # Create an intermediate stage which builds and exports our site. In the
@@ -14,8 +14,6 @@ FROM java AS export
 
 ARG KOBWEB_APP_ROOT
 
-ENV NODE_MAJOR=20
-
 # Copy the project code to an arbitrary subdir so we can install stuff in the
 # Docker container root without worrying about clobbering project files.
 COPY . /project
@@ -24,24 +22,25 @@ COPY . /project
 # Note: Node install instructions from: https://github.com/nodesource/distributions#installation-instructions
 # Note: Playwright is a system for running browsers, and here we use it to
 # install Chromium.
-RUN apt-get update \
-    && apt-get install -y ca-certificates curl gnupg unzip wget \
-    && mkdir -p /etc/apt/keyrings \
-    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update \
-    && apt-get install -y nodejs \
-    && npm init -y \
-    && npx playwright install --with-deps chromium
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    gnupg \
+    unzip \
+    wget \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm init -y && npx playwright install --with-deps chromium
 
-# Fetch and extract the latest version of the Kobweb CLI
+# Fetch and extract Kobweb CLI
 RUN KOBWEB_CLI_VERSION=$(curl -sSL https://raw.githubusercontent.com/varabyte/data/refs/heads/main/kobweb/cli-version.txt | xargs) \
     && wget https://github.com/varabyte/kobweb-cli/releases/download/v${KOBWEB_CLI_VERSION}/kobweb-${KOBWEB_CLI_VERSION}.zip \
-    && unzip kobweb-${KOBWEB_CLI_VERSION}.zip \
+    && unzip kobweb-${KOBWEB_CLI_VERSION}.zip -d /opt \
     && rm kobweb-${KOBWEB_CLI_VERSION}.zip \
-    && ln -s /kobweb-${KOBWEB_CLI_VERSION} /kobweb-cli
+    && ln -s /opt/kobweb-${KOBWEB_CLI_VERSION} /opt/kobweb-cli
 
-ENV PATH="/kobweb-cli/bin:${PATH}"
+ENV PATH="/opt/kobweb-cli/bin:${PATH}"
 
 WORKDIR /project/${KOBWEB_APP_ROOT}
 
@@ -49,17 +48,19 @@ WORKDIR /project/${KOBWEB_APP_ROOT}
 # (many free Cloud tiers only give you 512M of RAM). The following amount
 # should enough to build and export our site. If you ever get an OOM error,
 # consider bumping the memory value up further.
-RUN mkdir ~/.gradle && \
+RUN mkdir -p ~/.gradle && \
     echo "org.gradle.jvmargs=-Xmx325m" >> ~/.gradle/gradle.properties
 
 RUN kobweb export --notty
 
 #-----------------------------------------------------------------------------
-# Create the final stage, which contains just enough bits to run the Kobweb
-# server.
+# Create the final stage, which contains the minimum amout of stuff to run the
+# Kobweb server.
 FROM java AS run
 
 ARG KOBWEB_APP_ROOT
+
+WORKDIR /project/${KOBWEB_APP_ROOT}
 
 COPY --from=export /project/${KOBWEB_APP_ROOT}/.kobweb .kobweb
 
@@ -67,4 +68,5 @@ COPY --from=export /project/${KOBWEB_APP_ROOT}/.kobweb .kobweb
 # memory usage to that. You can remove this ENV line if your server isn't so
 # restricted. That said, 512M should be plenty for most (all?) sites.
 ENV JAVA_TOOL_OPTIONS="-Xmx512m"
-ENTRYPOINT [".kobweb/server/start.sh"]
+
+ENTRYPOINT ["/bin/sh", ".kobweb/server/start.sh"]
