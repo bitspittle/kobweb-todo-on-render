@@ -4,8 +4,7 @@ import com.varabyte.kobweb.api.Api
 import com.varabyte.kobweb.api.ApiContext
 import com.varabyte.kobweb.api.data.getValue
 import com.varabyte.kobweb.api.http.HttpMethod
-import com.varabyte.kobweb.api.http.setBodyText
-import kotlinx.serialization.encodeToString
+import com.varabyte.kobweb.api.http.bodyOf
 import kotlinx.serialization.json.Json
 import todo.model.TodoStore
 
@@ -15,5 +14,5 @@ fun listTodos(ctx: ApiContext) {
     val ownerId = ctx.req.params["owner"] ?: return
 
     val todos = ctx.data.getValue<TodoStore>()
-    ctx.res.setBodyText(Json.encodeToString(todos[ownerId]))
+    ctx.res.body = bodyOf(Json.encodeToString(todos[ownerId]))
 }

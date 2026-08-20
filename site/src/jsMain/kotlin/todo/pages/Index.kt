@@ -4,6 +4,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.varabyte.kobweb.browser.api
+import com.varabyte.kobweb.browser.http.bodyAsBytes
 import com.varabyte.kobweb.compose.css.FontWeight
 import com.varabyte.kobweb.compose.css.TextAlign
 import com.varabyte.kobweb.compose.css.WhiteSpace
@@ -20,7 +21,6 @@ import com.varabyte.kobweb.silk.style.base
 import com.varabyte.kobweb.silk.style.toModifier
 import kotlinx.browser.window
 import kotlinx.coroutines.launch
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.web.css.cssRem
 import org.jetbrains.compose.web.css.em
@@ -37,7 +37,7 @@ private suspend fun loadAndReplaceTodos(id: String, todos: SnapshotStateList<Tod
     return window.api.get("list?owner=$id").let { listBytes ->
         Snapshot.withMutableSnapshot {
             todos.clear()
-            todos.addAll(Json.decodeFromString(listBytes.decodeToString()))
+            todos.addAll(Json.decodeFromString(listBytes.bodyAsBytes().decodeToString()))
         }
     }
 }
@@ -62,7 +62,7 @@ fun HomePage() {
     LaunchedEffect(Unit) {
         check(!ready && loadingCount == 1)
         id = window.localStorage.getItem("id") ?: run {
-            window.api.get("id").decodeToString().also {
+            window.api.get("id").bodyAsBytes().decodeToString().also {
                 window.localStorage.setItem("id", it)
             }
         }
