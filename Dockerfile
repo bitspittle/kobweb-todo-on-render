@@ -48,8 +48,15 @@ WORKDIR /project/${KOBWEB_APP_ROOT}
 # (many free Cloud tiers only give you 512M of RAM). The following amount
 # should enough to build and export our site. If you ever get an OOM error,
 # consider bumping the memory value up further.
-RUN mkdir -p ~/.gradle && \
-    echo "org.gradle.jvmargs=-Xmx325m" >> ~/.gradle/gradle.properties
+# We also ask the Kotlin compiler to run inside Gradle instead of using its
+# own daemon.
+# Finally, serial GC is slower but apparently lowers the memory footprint
+# of the build.
+RUN mkdir -p ~/.gradle && echo "\
+    org.gradle.daemon=false\n\
+    org.gradle.jvmargs=-Xmx400m -XX:+UseSerialGC\n\
+    kotlin.compiler.execution.strategy=in-process\n\
+" > ~/.gradle/gradle.properties
 
 RUN kobweb export --notty
 
