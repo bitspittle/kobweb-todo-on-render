@@ -34,10 +34,11 @@ import todo.components.widgets.TodoForm
 import todo.model.TodoItem
 
 private suspend fun loadAndReplaceTodos(id: String, todos: SnapshotStateList<TodoItem>) {
-    return window.api.get("list?owner=$id").let { listBytes ->
+    return window.api.get("list?owner=$id").bodyAsBytes()
+        .let { listBytes ->
         Snapshot.withMutableSnapshot {
             todos.clear()
-            todos.addAll(Json.decodeFromString(listBytes.bodyAsBytes().decodeToString()))
+            todos.addAll(Json.decodeFromString(listBytes.decodeToString()))
         }
     }
 }

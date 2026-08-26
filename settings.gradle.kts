@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.mavenCentral
-
 pluginManagement {
     repositories {
         gradlePluginPortal()
@@ -9,7 +7,6 @@ pluginManagement {
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
-        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
         google()
     }
 }
@@ -18,9 +15,11 @@ dependencyResolutionManagement {
 // this block if you never plan to use them.
 gradle.settingsEvaluated {
     fun RepositoryHandler.kobwebSnapshots() {
-        maven("https://s01.oss.sonatype.org/content/repositories/snapshots/") {
-            content { includeGroupByRegex("com\\.varabyte\\.kobweb.*") }
-            mavenContent { snapshotsOnly() }
+        maven("https://central.sonatype.com/repository/maven-snapshots/") {
+            mavenContent {
+                includeGroupByRegex("com\\.varabyte\\.kobweb.*")
+                snapshotsOnly()
+            }
         }
     }
 

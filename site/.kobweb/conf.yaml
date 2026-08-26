@@ -11,10 +11,4 @@ server:
       script: "build/kotlin-webpack/js/productionExecutable/todo.js"
       siteRoot: ".kobweb/site"
 
-  cors:
-    hosts:
-      - name: "kobweb-todo.onrender.com"
-        schemes:
-          - "https"
-
   port: 8080
