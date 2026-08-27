@@ -1,0 +1,75 @@
+name: Export and deploy site
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  export_and_upload:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      # Will fetch latest CLI version and store it in KOBWEB_CLI_VERSION env var
+      - name: Fetch latest Kobweb CLI version
+        run: |
+          VERSION=$(curl -sSL https://raw.githubusercontent.com/varabyte/data/refs/heads/main/kobweb/cli-version.txt | xargs)
+          echo "KOBWEB_CLI_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # When projects are created on Windows, the executable bit is sometimes lost. So set it back just in case.
+      - name: Ensure Gradle is executable
+        run: chmod +x gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Query Browser Cache ID
+        id: browser-cache-id
+        run: echo "value=$(./gradlew -q :site:kobwebBrowserCacheId)" >> $GITHUB_OUTPUT
+
+      - name: Cache Browser Dependencies
+        uses: actions/cache@v6
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.browser-cache-id.outputs.value }}
+
+      - name: Fetch kobweb
+        uses: robinraju/release-downloader@v1.9
+        with:
+          repository: "varabyte/kobweb-cli"
+          tag: "v${{ env.KOBWEB_CLI_VERSION }}"
+          fileName: "kobweb-${{ env.KOBWEB_CLI_VERSION }}.zip"
+          tarBall: false
+          zipBall: false
+
+      - name: Unzip kobweb
+        run: unzip kobweb-${{ env.KOBWEB_CLI_VERSION }}.zip
+
+      - name: Run export (fullstack)
+        run: |
+          cd site
+          ../kobweb-${{ env.KOBWEB_CLI_VERSION }}/bin/kobweb export --notty --layout fullstack
+
+      - name: Upload site
+        uses: actions/upload-artifact@v7
+        with:
+          name: kobweb-folder
+          path: site/.kobweb
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+#       TODO: Enable after Render is ready
+#      - name: Trigger Render Deployment
+#        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
