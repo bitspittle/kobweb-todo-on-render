@@ -70,6 +70,5 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-#       TODO: Enable after Render is ready
-#      - name: Trigger Render Deployment
-#        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      - name: Trigger Render Deployment
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
