@@ -2,10 +2,10 @@
 # redeclared explicitly, but the value only needs to be specified once.
 ARG KOBWEB_APP_ROOT="site"
 
-# Stage 1: Download the site files (build by GitHub)
+# Stage 1: Download the files needed to drive our site (from GitHub, where they were built)
 FROM alpine:latest AS download
 
-# Minimum deps needed to fetch
+# Minimum deps needed to fetch and process responses / files
 RUN apk add --no-cache curl jq unzip
 
 ARG REPO_OWNER="bitspittle"
@@ -14,11 +14,12 @@ ARG REPO_NAME="kobweb-todo-on-render"
 ARG ARTIFACT_NAME="kobweb-folder"
 ARG KOBWEB_APP_ROOT
 
-# Render automatically injects this during Docker builds, breaking the layer cache per commit
+# Render automatically injects this value during Docker builds. We will use it to ensure we download the right artifact.
 ARG RENDER_GIT_COMMIT
 
 # We will search for the artifact associated with our specific git commit. If for some reason the API says it can't find
-# it, we'll try a few more times with exponential backoff, as maybe things are still propagating through their system.
+# it, we'll try a few more times with exponential backoff, as maybe things are still propagating through GitHub's
+# system. In practice, we expect to find the artifact on the first search.
 RUN --mount=type=secret,id=GH_TOKEN,target=/etc/secrets/GH_TOKEN \
     set -e; \
     echo "==> [1/4] Starting artifact download process..."; \
@@ -29,11 +30,8 @@ RUN --mount=type=secret,id=GH_TOKEN,target=/etc/secrets/GH_TOKEN \
     if [ -z "$GH_TOKEN" ]; then \
       echo "==> Missing GH_TOKEN secret file." && exit 1; \
     fi; \
-    if [ -z "$RENDER_GIT_COMMIT" ]; then \
-      echo "==> RENDER_GIT_COMMIT is empty. Cannot fetch commit-matched artifact." && exit 1; \
-    fi; \
     \
-    API_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/artifacts?name=${ARTIFACT_NAME}"; \
+    ARTIFACTS_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/artifacts?name=${ARTIFACT_NAME}"; \
     ARTIFACT_ID=""; \
     MAX_ATTEMPTS=5; \
     DELAY=2; \
@@ -41,7 +39,7 @@ RUN --mount=type=secret,id=GH_TOKEN,target=/etc/secrets/GH_TOKEN \
     echo "==> [2/4] Searching GitHub API for matching artifact (with retry/backoff)..."; \
     for attempt in $(seq 1 $MAX_ATTEMPTS); do \
       echo "    Attempt ${attempt}/${MAX_ATTEMPTS}..."; \
-      RESPONSE=$(curl -sS -f -H "Authorization: Bearer $GH_TOKEN" "$API_URL" || true); \
+      RESPONSE=$(curl -sS -f -H "Authorization: Bearer $GH_TOKEN" "$ARTIFACTS_URL" || true); \
       \
       if [ -n "$RESPONSE" ]; then \
         ARTIFACT_ID=$(echo "$RESPONSE" | jq -r --arg SHA "$RENDER_GIT_COMMIT" \
@@ -64,13 +62,13 @@ RUN --mount=type=secret,id=GH_TOKEN,target=/etc/secrets/GH_TOKEN \
       echo "==> Failed to find artifact '${ARTIFACT_NAME}' for commit ${RENDER_GIT_COMMIT} after ${MAX_ATTEMPTS} attempts." && exit 1; \
     fi; \
     \
-    DOWNLOAD_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/artifacts/${ARTIFACT_ID}/zip"; \
-    echo "==> [3/4] Downloading zip file from ${DOWNLOAD_URL}..."; \
+    ARTIFACT_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/artifacts/${ARTIFACT_ID}/zip"; \
+    echo "==> [3/4] Downloading zip file from ${ARTIFACT_URL} ..."; \
     curl -sS -f -L \
       -H "Authorization: Bearer $GH_TOKEN" \
       -H "Accept: application/vnd.github+json" \
       -o ${ARTIFACT_NAME}.zip \
-      "$DOWNLOAD_URL"; \
+      "$ARTIFACT_URL"; \
     \
     echo "==> [4/4] Extracting artifact to target directory..."; \
     mkdir -p /project/${KOBWEB_APP_ROOT}/.kobweb; \
@@ -79,7 +77,7 @@ RUN --mount=type=secret,id=GH_TOKEN,target=/etc/secrets/GH_TOKEN \
 
 #-----------------------------------------------------------------------------
 # Create the final stage, which contains the minimum amout of stuff to run the
-# Kobweb server.
+# Kobweb server. Use the latest JRE image available to us at this time.
 FROM eclipse-temurin:21-jre AS run
 
 ARG KOBWEB_APP_ROOT
