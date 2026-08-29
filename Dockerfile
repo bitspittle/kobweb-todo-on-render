@@ -10,6 +10,7 @@ RUN apk add --no-cache curl jq unzip
 
 ARG REPO_OWNER="bitspittle"
 ARG REPO_NAME="kobweb-todo-on-render"
+
 # The following is the name used in the GitHub workflow
 ARG ARTIFACT_NAME="kobweb-folder"
 ARG KOBWEB_APP_ROOT
@@ -78,7 +79,7 @@ RUN --mount=type=secret,id=GH_TOKEN,target=/etc/secrets/GH_TOKEN \
 #-----------------------------------------------------------------------------
 # Create the final stage, which contains the minimum amout of stuff to run the
 # Kobweb server. Use the latest JRE image available to us at this time.
-FROM eclipse-temurin:21-jre AS run
+FROM eclipse-temurin:25-jre-alpine AS run
 
 ARG KOBWEB_APP_ROOT
 
